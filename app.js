@@ -1,11 +1,15 @@
+require('dotenv').config()
 const express = require('express')
 const mongoose = require('mongoose');
 var cors = require('cors')
+const jwt = require('jsonwebtoken')
+
+
 // const morgan = require('morgan')
 
 const bookController = require('./controllers/bookController')
 let db = mongoose.connection
-mongoose.connect('mongodb://localhost:27017/Library', {
+mongoose.connect(process.env.MONGODB_URL, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
     useCreateIndex: true
@@ -20,7 +24,11 @@ app.set('view engine', 'pug')
 
 app.use(express.static('static'))
 app.use(cors())
+app.use(express.json())
 const bookRouter = require('./routes/books')
+const authRouter = require('./routes/auth')
+
+app.use('/auth', authRouter)
 // app.use(morgan('dev'))
 let logger = (req, _, next) => {
     console.log(req.method, req.path)
@@ -29,8 +37,28 @@ let logger = (req, _, next) => {
 app.use(logger)
 app.use(express.urlencoded(extended=true))
 
+let vaildateRequest = (req,res,next) =>{
+    console.log(req.headers['authorization'] )
+    let authHeader = req.headers['authorization'] 
+    if ( !authHeader ) {
+        res.status(403).send("Token not provided")
+        return
+    }
+    let token =authHeader.split(" ")[1]
+    if (!token ) {
+        res.status(403).send("Token not provided")
+        return
+    }
+    try {
+        let data = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET)
+        console.log(data)
+        next()
+    } catch(err) {
+        res.status(403).send("Invaild Token provided")
+    }
+}
 
-app.get('/books', async (_, res) => {
+app.get('/books',vaildateRequest, async (_, res) => {
     let books = await bookController.getAllBooks()
     console.log(books)
     res.json(books)
@@ -41,11 +69,18 @@ app.delete(/books*/, async (req, res) => {
     await bookController.removeBook( /(^.*\/)(.*$)/.exec( decodeURIComponent( req.path))[2] )
     res.end()
 })
-app.get('/addbook', (_,res) => {
+app.get('/addbook', (req ,res) => {
+    console.log('test')
     res.render('Addbook' )
 })
+app.post('/addbook', async (req, res) =>{
+    console.log( req.body )
+    await bookController.addNewBook(req.body)
+    res.end()
+} )
+
 app.post('/',(req,res) => {
-    console.log(req , res)
+    // console.log(req , res)
     res.end()
 })
 

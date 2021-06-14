@@ -34,7 +34,7 @@ const getAllBooks = async () => {
     return returnBooks
 }
 
-const addNewBook = async (title, price, categoryName, authors) => {
+const addNewBook = async ({title, price, categoryName, authors}) => {
     try{
         const category = await Category.findOne({name:categoryName})
        
@@ -43,7 +43,7 @@ const addNewBook = async (title, price, categoryName, authors) => {
         console.log('----------------------')
         console.log('Book ' + title +' saved')
         console.log('----------------------')
-        readlineSync.question('Enter to continue ')
+       
     } catch (e){
         console.log('Error', e.message)
     }
